@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Stars Game with Facebook Leaderboard</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #1e1e1e;
+            font-family: 'Arial', sans-serif;
+            color: #fff;
+        }
+        canvas {
+            border: 5px solid #ffd700;
+            background-image: radial-gradient(circle at center, #111, #222);
+            box-shadow: 0px 0px 15px rgba(255, 215, 0, 0.8);
+        }
+        #scoreboard {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        #restartButton, #skipLoginButton, #loginButton {
+            padding: 10px 20px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            display: none;
+        }
+        #restartButton {
+            background-color: #ff5722;
+            box-shadow: 0px 0px 5px rgba(255, 87, 34, 0.8);
+        }
+        #skipLoginButton {
+            background-color: #888;
+            margin-top: 10px;
+        }
+        #loginButton {
+            background-color: #4267B2;
+        }
+        #leaderboard {
+            margin-top: 20px;
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <div id="fb-root"></div>
+    <h1>Catch the Stars Game</h1>
+    <div id="scoreboard">Score: <span id="score">0</span></div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <button id="restartButton" onclick="restartGame()">Play Again</button>
+    <button id="loginButton">Login with Facebook</button>
+    <button id="skipLoginButton" onclick="skipLogin()">Skip Login</button>
+    <div id="leaderboard">
+        <h2>Leaderboard</h2>
+        <ul id="leaderboardList"></ul>
+    </div>
+
+    <!-- Đường dẫn đến Facebook SDK và file game.js -->
+    <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
