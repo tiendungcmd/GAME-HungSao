@@ -1,85 +1,15 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const canvasWidth = canvas.width;
-const canvasHeight = canvas.height;
 const restartButton = document.getElementById('restartButton');
 const scoreDisplay = document.getElementById('score');
-const leaderboardList = document.getElementById('leaderboardList');
-const loginButton = document.getElementById('loginButton');
-const skipLoginButton = document.getElementById('skipLoginButton');
 
-// Facebook SDK - Khởi tạo và kiểm tra đăng nhập
-window.fbAsyncInit = function() {
-    FB.init({
-        appId      :  966097475553804, // Thay YOUR_APP_ID bằng App ID của bạn
-        cookie     : true,
-        xfbml      : true,
-        version    : 'v13.0'
-    });
+// Tự động điều chỉnh kích thước Canvas theo màn hình
+let canvasWidth = window.innerWidth;
+let canvasHeight = window.innerHeight - 150; // Chừa khoảng trống cho scoreboard và nút
+canvas.width = canvasWidth;
+canvas.height = canvasHeight;
 
-    FB.getLoginStatus(function(response) {
-        handleLoginStatus(response);
-    });
-};
-
-// Nút đăng nhập Facebook
-loginButton.onclick = function() {
-    FB.login(function(response) {
-        handleLoginStatus(response);
-    }, {scope: 'user_friends'});
-};
-
-// Xử lý trạng thái đăng nhập Facebook
-function handleLoginStatus(response) {
-    if (response.status === 'connected') {
-        loginButton.style.display = 'none';
-        skipLoginButton.style.display = 'none';
-        loadFriendsLeaderboard();
-    } else {
-        loginButton.style.display = 'block';
-        skipLoginButton.style.display = 'block';
-    }
-}
-
-// Bỏ qua đăng nhập
-function skipLogin() {
-    loginButton.style.display = 'none';
-    skipLoginButton.style.display = 'none';
-    displayLeaderboard([]);
-}
-
-// Lấy danh sách bạn bè và hiển thị bảng xếp hạng
-function loadFriendsLeaderboard() {
-    FB.api('/me/friends', function(response) {
-        if (response && !response.error) {
-            const friends = response.data;
-            const leaderboard = getFriendScores(friends);
-            displayLeaderboard(leaderboard);
-        } else {
-            console.error('Lỗi khi lấy danh sách bạn bè:', response.error);
-        }
-    });
-}
-
-// Giả lập điểm số của bạn bè
-function getFriendScores(friends) {
-    return friends.map(friend => ({
-        name: friend.name,
-        score: Math.floor(Math.random() * 100) // Điểm số ngẫu nhiên cho ví dụ
-    })).sort((a, b) => b.score - a.score);
-}
-
-// Hiển thị bảng xếp hạng bạn bè
-function displayLeaderboard(leaderboard) {
-    leaderboardList.innerHTML = '';
-    leaderboard.forEach((friend, index) => {
-        const listItem = document.createElement('li');
-        listItem.textContent = `${index + 1}. ${friend.name} - Điểm: ${friend.score}`;
-        leaderboardList.appendChild(listItem);
-    });
-}
-
-// Game hứng sao
+// Khởi tạo nhân vật người chơi với hình cái giỏ
 const player = {
     x: canvasWidth / 2,
     y: canvasHeight - 50,
@@ -90,7 +20,15 @@ const player = {
 };
 player.image.src = 'basket.png'; // Đường dẫn đến hình cái giỏ
 
+let score = 0;
+let starSpeed = 3;
+let starSpawnInterval = 1000;
+let stars = [];
+let effects = [];
+let gameOver = false;
 let keys = {};
+
+// Điều khiển bàn phím
 document.addEventListener('keydown', (e) => { keys[e.key] = true; });
 document.addEventListener('keyup', (e) => { keys[e.key] = false; });
 
@@ -99,31 +37,51 @@ function movePlayer() {
     if (keys['ArrowRight'] && player.x + player.width < canvasWidth) player.x += player.speed;
 }
 
-let stars = [];
-let effects = []; // Mảng để lưu các hiệu ứng nổ sáng
-const starSize = 20;
-let score = 0;
-let starSpeed = 3;
-let starSpawnInterval = 1000;
-let gameOver = false;
+// Điều khiển cảm ứng
+canvas.addEventListener('touchstart', (e) => {
+    let touchX = e.touches[0].clientX;
+    if (touchX < player.x) {
+        player.x -= player.speed * 2;
+    } else {
+        player.x += player.speed * 2;
+    }
+});
 
+// Tạo sao ngẫu nhiên
 function createStar() {
-    const x = Math.random() * (canvasWidth - starSize);
-    stars.push({ x, y: 0, radius: starSize / 2, color: '#ffd700' });
+    const x = Math.random() * (canvasWidth - 20);
+    stars.push({ x: x, y: 0, radius: 10, color: '#ffd700' });
 }
 
+// Di chuyển các ngôi sao
 function moveStars() {
     for (let i = stars.length - 1; i >= 0; i--) {
         stars[i].y += starSpeed;
         if (stars[i].y - stars[i].radius > canvasHeight) {
             gameOver = true;
             saveScore(score);
-            restartButton.style.display = 'block';
+            restartButton.style.display = 'block'; // Hiển thị nút "Chơi lại"
             return;
         }
     }
 }
 
+// Tạo hiệu ứng khi hứng được sao
+function createEffect(x, y) {
+    effects.push({ x: x, y: y, radius: 10, opacity: 1.0 });
+}
+
+// Cập nhật và xóa hiệu ứng
+function updateEffects() {
+    for (let i = effects.length - 1; i >= 0; i--) {
+        const effect = effects[i];
+        effect.radius += 2;
+        effect.opacity -= 0.05;
+        if (effect.opacity <= 0) effects.splice(i, 1);
+    }
+}
+
+// Kiểm tra va chạm giữa giỏ và sao
 function checkCollision() {
     for (let i = stars.length - 1; i >= 0; i--) {
         const star = stars[i];
@@ -141,38 +99,7 @@ function checkCollision() {
     }
 }
 
-// Tạo hiệu ứng khi hứng được sao
-function createEffect(x, y) {
-    effects.push({
-        x: x,
-        y: y,
-        radius: 10,
-        opacity: 1.0
-    });
-}
-
-// Di chuyển và làm mờ dần hiệu ứng
-function updateEffects() {
-    for (let i = effects.length - 1; i >= 0; i--) {
-        const effect = effects[i];
-        effect.radius += 2;
-        effect.opacity -= 0.05;
-        if (effect.opacity <= 0) {
-            effects.splice(i, 1);
-        }
-    }
-}
-
-// Vẽ các hiệu ứng nổ sáng
-function drawEffects() {
-    effects.forEach(effect => {
-        ctx.fillStyle = `rgba(255, 215, 0, ${effect.opacity})`;
-        ctx.beginPath();
-        ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
+// Tăng độ khó khi đạt được điểm số
 function increaseDifficulty() {
     if (score % 50 === 0) {
         starSpeed += 0.5;
@@ -184,10 +111,12 @@ function increaseDifficulty() {
     }
 }
 
+// Vẽ giỏ
 function drawPlayer() {
     ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
 }
 
+// Vẽ các ngôi sao
 function drawStars() {
     stars.forEach(star => {
         ctx.fillStyle = star.color;
@@ -197,9 +126,20 @@ function drawStars() {
     });
 }
 
+// Vẽ hiệu ứng
+function drawEffects() {
+    effects.forEach(effect => {
+        ctx.fillStyle = `rgba(255, 215, 0, ${effect.opacity})`;
+        ctx.beginPath();
+        ctx.arc(effect.x, effect.y, effect.radius, 0, Math.PI * 2);
+        ctx.fill();
+    });
+}
+
+// Cập nhật trò chơi
 function update() {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-    
+
     if (!gameOver) {
         movePlayer();
         moveStars();
@@ -213,14 +153,14 @@ function update() {
 
 let spawnInterval = setInterval(createStar, starSpawnInterval);
 
+// Vòng lặp trò chơi
 function gameLoop() {
     update();
-    if (!gameOver) {
-        requestAnimationFrame(gameLoop);
-    }
+    if (!gameOver) requestAnimationFrame(gameLoop);
 }
 gameLoop();
 
+// Thiết lập lại trò chơi khi nhấn nút "Chơi lại"
 function restartGame() {
     gameOver = false;
     score = 0;
@@ -229,17 +169,17 @@ function restartGame() {
     stars = [];
     effects = [];
     scoreDisplay.textContent = score;
-    restartButton.style.display = 'none';
+    restartButton.style.display = 'none'; // Ẩn nút "Chơi lại"
     clearInterval(spawnInterval);
     spawnInterval = setInterval(createStar, starSpawnInterval);
     gameLoop();
 }
 
+// Lưu điểm số
 function saveScore(newScore) {
     let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
     leaderboard.push(newScore);
     leaderboard.sort((a, b) => b - a);
     leaderboard = leaderboard.slice(0, 5);
     localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
-    displayLeaderboard([]);
 }
